@@ -8,6 +8,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { HealthModule } from './health/health.module';
 import { Task } from './tasks/entities/task.entity';
 import { CalendarModule } from './calendar/calendar.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CalendarModule } from './calendar/calendar.module';
     TasksModule,
     HealthModule,
     CalendarModule,
+    AuthModule,
     // Other modules will go here later
   ],
   controllers: [AppController],
