@@ -1,7 +1,9 @@
 // src/calendar/calendar.service.ts
 import { Injectable, Logger, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { google, Auth } from 'googleapis';
+import { google, Auth, calendar_v3 } from 'googleapis';
+
+type Schema$Event = calendar_v3.Schema$Event;
 
 @Injectable()
 export class CalendarService {
