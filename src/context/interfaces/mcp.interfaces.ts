@@ -1,4 +1,5 @@
     // src/context/interfaces/mcp.interfaces.ts
+    import { Task } from '../../tasks/entities/task.entity'; // Import the Task entity
 
     // Define a type for the structure of calendar events within the context
     export interface McpCalendarEvent {
@@ -31,6 +32,6 @@
         user_id: string; // Placeholder for now
         timestamp: string; // ISO 8601 timestamp
         context: McpContext;
-        tasks: any[]; // Placeholder for tasks array - define a Task interface later
+        tasks: Task[]; // Use the imported Task entity type here
     }
     
