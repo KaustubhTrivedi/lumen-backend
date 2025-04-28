@@ -1,10 +1,18 @@
 // src/calendar/calendar.service.ts
-import { Injectable, Logger, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { google, Auth, calendar_v3 } from 'googleapis';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OAuthToken, OAuthProvider } from '../oauth-token/entities/oauth-token.entity';
+import {
+  OAuthToken,
+  OAuthProvider,
+} from '../oauth-token/entities/oauth-token.entity';
 
 @Injectable()
 export class CalendarService {
@@ -21,9 +29,15 @@ export class CalendarService {
     const redirectUri = this.configService.get<string>('GOOGLE_REDIRECT_URI');
 
     if (!clientId || !clientSecret || !redirectUri) {
-      this.logger.error('Google OAuth credentials are not configured in .env file!');
+      this.logger.error(
+        'Google OAuth credentials are not configured in .env file!',
+      );
     } else {
-      this.oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+      this.oauth2Client = new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        redirectUri,
+      );
       this.logger.log('Google OAuth2 Client Initialized');
 
       this.oauth2Client.on('tokens', (tokens) => {
@@ -32,7 +46,9 @@ export class CalendarService {
           this.logger.log('Received refresh_token within "tokens" event.');
           this.saveOrUpdateTokens(OAuthProvider.GOOGLE_CALENDAR, tokens);
         } else {
-          this.logger.log('Access token refreshed via "tokens" event (no new refresh_token).');
+          this.logger.log(
+            'Access token refreshed via "tokens" event (no new refresh_token).',
+          );
         }
       });
     }
@@ -40,7 +56,9 @@ export class CalendarService {
 
   generateAuthUrl(): string {
     if (!this.oauth2Client) {
-      throw new InternalServerErrorException('Google OAuth2 Client not initialized. Check configuration.');
+      throw new InternalServerErrorException(
+        'Google OAuth2 Client not initialized. Check configuration.',
+      );
     }
     const scopes = ['https://www.googleapis.com/auth/calendar.readonly'];
     const authorizationUrl = this.oauth2Client.generateAuthUrl({
@@ -55,7 +73,9 @@ export class CalendarService {
 
   async getTokensFromCode(code: string): Promise<Auth.Credentials> {
     if (!this.oauth2Client) {
-      throw new InternalServerErrorException('Google OAuth2 Client not initialized.');
+      throw new InternalServerErrorException(
+        'Google OAuth2 Client not initialized.',
+      );
     }
     try {
       this.logger.log(`Attempting to exchange code for tokens...`);
@@ -67,12 +87,20 @@ export class CalendarService {
       this.oauth2Client.setCredentials(tokens);
       return tokens;
     } catch (error) {
-      this.logger.error(`Failed to exchange authorization code: ${error.message}`, error.stack);
-      throw new InternalServerErrorException(`Authentication failed: ${error.message}`);
+      this.logger.error(
+        `Failed to exchange authorization code: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        `Authentication failed: ${error.message}`,
+      );
     }
   }
 
-  private async saveOrUpdateTokens(provider: OAuthProvider, tokens: Partial<Auth.Credentials>): Promise<void> {
+  private async saveOrUpdateTokens(
+    provider: OAuthProvider,
+    tokens: Partial<Auth.Credentials>,
+  ): Promise<void> {
     this.logger.log(`Saving/updating tokens for provider: ${provider}`);
 
     let existingToken = await this.tokenRepository.findOneBy({ provider });
@@ -94,7 +122,9 @@ export class CalendarService {
       this.logger.log(`Updated existing tokens for ${provider}`);
     } else {
       if (!tokens.access_token) {
-        this.logger.error(`Attempted to save new token for ${provider} without an access token.`);
+        this.logger.error(
+          `Attempted to save new token for ${provider} without an access token.`,
+        );
         return;
       }
       const newToken = this.tokenRepository.create({
@@ -111,24 +141,37 @@ export class CalendarService {
 
   private async loadTokensAndGetClient(): Promise<Auth.OAuth2Client> {
     if (!this.oauth2Client) {
-      throw new InternalServerErrorException('Google OAuth2 Client not initialized.');
+      throw new InternalServerErrorException(
+        'Google OAuth2 Client not initialized.',
+      );
     }
 
     if (
       this.oauth2Client.credentials &&
       this.oauth2Client.credentials.access_token &&
-      (!this.oauth2Client.credentials.expiry_date || this.oauth2Client.credentials.expiry_date > Date.now())
+      (!this.oauth2Client.credentials.expiry_date ||
+        this.oauth2Client.credentials.expiry_date > Date.now())
     ) {
-      this.logger.log('Using already set and valid credentials on OAuth client.');
+      this.logger.log(
+        'Using already set and valid credentials on OAuth client.',
+      );
       return this.oauth2Client;
     }
 
-    this.logger.log(`Attempting to load tokens from DB for ${OAuthProvider.GOOGLE_CALENDAR}`);
-    const storedToken = await this.tokenRepository.findOneBy({ provider: OAuthProvider.GOOGLE_CALENDAR });
+    this.logger.log(
+      `Attempting to load tokens from DB for ${OAuthProvider.GOOGLE_CALENDAR}`,
+    );
+    const storedToken = await this.tokenRepository.findOneBy({
+      provider: OAuthProvider.GOOGLE_CALENDAR,
+    });
 
     if (!storedToken) {
-      this.logger.warn(`No stored tokens found for ${OAuthProvider.GOOGLE_CALENDAR}`);
-      throw new UnauthorizedException('Not authenticated with Google Calendar. No stored tokens.');
+      this.logger.warn(
+        `No stored tokens found for ${OAuthProvider.GOOGLE_CALENDAR}`,
+      );
+      throw new UnauthorizedException(
+        'Not authenticated with Google Calendar. No stored tokens.',
+      );
     }
 
     const decryptedTokens: Auth.Credentials = {
@@ -143,14 +186,26 @@ export class CalendarService {
 
     const now = Date.now();
     const buffer = 60 * 1000;
-    if (!decryptedTokens.access_token || (decryptedTokens.expiry_date && decryptedTokens.expiry_date < now + buffer)) {
-      this.logger.log('Access token is missing or expired. Attempting refresh...');
+    if (
+      !decryptedTokens.access_token ||
+      (decryptedTokens.expiry_date &&
+        decryptedTokens.expiry_date < now + buffer)
+    ) {
+      this.logger.log(
+        'Access token is missing or expired. Attempting refresh...',
+      );
       if (!decryptedTokens.refresh_token) {
-        this.logger.error('Access token expired, but no refresh token available in storage.');
-        throw new UnauthorizedException('Authentication expired, and no refresh token available. Please re-authenticate.');
+        this.logger.error(
+          'Access token expired, but no refresh token available in storage.',
+        );
+        throw new UnauthorizedException(
+          'Authentication expired, and no refresh token available. Please re-authenticate.',
+        );
       }
 
-      this.oauth2Client.setCredentials({ refresh_token: decryptedTokens.refresh_token });
+      this.oauth2Client.setCredentials({
+        refresh_token: decryptedTokens.refresh_token,
+      });
 
       try {
         const { credentials } = await this.oauth2Client.refreshAccessToken();
@@ -161,23 +216,37 @@ export class CalendarService {
           refresh_token: decryptedTokens.refresh_token,
         };
 
-        await this.saveOrUpdateTokens(OAuthProvider.GOOGLE_CALENDAR, updatedTokensToSave);
+        await this.saveOrUpdateTokens(
+          OAuthProvider.GOOGLE_CALENDAR,
+          updatedTokensToSave,
+        );
 
         this.oauth2Client.setCredentials(updatedTokensToSave);
         this.logger.log('Set refreshed credentials on OAuth client.');
       } catch (refreshError) {
-        this.logger.error(`Failed to refresh access token: ${refreshError.message}`, refreshError.response?.data);
-        throw new UnauthorizedException(`Failed to refresh access token. Please re-authenticate. Error: ${refreshError.message}`);
+        this.logger.error(
+          `Failed to refresh access token: ${refreshError.message}`,
+          refreshError.response?.data,
+        );
+        throw new UnauthorizedException(
+          `Failed to refresh access token. Please re-authenticate. Error: ${refreshError.message}`,
+        );
       }
     } else {
-      this.logger.log(`Setting credentials on OAuth client from stored tokens for ${OAuthProvider.GOOGLE_CALENDAR}`);
+      this.logger.log(
+        `Setting credentials on OAuth client from stored tokens for ${OAuthProvider.GOOGLE_CALENDAR}`,
+      );
     }
 
     return this.oauth2Client;
   }
 
-  async listUpcomingEvents(maxResults = 10): Promise<calendar_v3.Schema$Event[]> {
-    this.logger.log(`Attempting to list upcoming events (max: ${maxResults})...`);
+  async listUpcomingEvents(
+    maxResults = 10,
+  ): Promise<calendar_v3.Schema$Event[]> {
+    this.logger.log(
+      `Attempting to list upcoming events (max: ${maxResults})...`,
+    );
     try {
       const client = await this.loadTokensAndGetClient();
 
@@ -191,15 +260,24 @@ export class CalendarService {
       });
 
       const events = response.data.items;
-      this.logger.log(`Successfully fetched ${events?.length || 0} upcoming events.`);
+      this.logger.log(
+        `Successfully fetched ${events?.length || 0} upcoming events.`,
+      );
       return events || [];
     } catch (error) {
       if (error instanceof UnauthorizedException) {
-        this.logger.error(`Authentication error listing events: ${error.message}`);
+        this.logger.error(
+          `Authentication error listing events: ${error.message}`,
+        );
         throw error;
       }
-      this.logger.error(`Failed to fetch calendar events: ${error.message}`, error.stack);
-      throw new InternalServerErrorException(`Failed to fetch calendar events: ${error.message}`);
+      this.logger.error(
+        `Failed to fetch calendar events: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        `Failed to fetch calendar events: ${error.message}`,
+      );
     }
   }
 }

@@ -3,7 +3,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { CalendarService } from './calendar.service';
 import { google, Auth, calendar_v3 } from 'googleapis';
-import { InternalServerErrorException, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
 
 // --- Mocking googleapis ---
 // Create mock functions for the methods we expect to call
@@ -40,7 +44,6 @@ jest.mock('googleapis', () => ({
 }));
 // --- End Mocking googleapis ---
 
-
 describe('CalendarService', () => {
   let service: CalendarService;
   let configService: ConfigService;
@@ -49,10 +52,14 @@ describe('CalendarService', () => {
   const mockConfigService = {
     get: jest.fn((key: string) => {
       switch (key) {
-        case 'GOOGLE_CLIENT_ID': return 'mockClientId';
-        case 'GOOGLE_CLIENT_SECRET': return 'mockClientSecret';
-        case 'GOOGLE_REDIRECT_URI': return 'mockRedirectUri';
-        default: return null;
+        case 'GOOGLE_CLIENT_ID':
+          return 'mockClientId';
+        case 'GOOGLE_CLIENT_SECRET':
+          return 'mockClientSecret';
+        case 'GOOGLE_REDIRECT_URI':
+          return 'mockRedirectUri';
+        default:
+          return null;
       }
     }),
   };
@@ -110,23 +117,25 @@ describe('CalendarService', () => {
     });
 
     it('should throw if OAuth2 client is not initialized', () => {
-       // Simulate missing config by creating service instance without proper setup
-       // (This requires more complex setup or testing constructor logic separately)
-       // Alternatively, manually set the internal client to null/undefined for this test case if possible
-       (service as any).oauth2Client = null;
-       expect(() => service.generateAuthUrl()).toThrow(InternalServerErrorException);
+      // Simulate missing config by creating service instance without proper setup
+      // (This requires more complex setup or testing constructor logic separately)
+      // Alternatively, manually set the internal client to null/undefined for this test case if possible
+      (service as any).oauth2Client = null;
+      expect(() => service.generateAuthUrl()).toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
   describe('getTokensFromCode', () => {
     const authCode = 'testCode';
     const mockTokens: Auth.Credentials = {
-        access_token: 'mock_access_token',
-        refresh_token: 'mock_refresh_token',
-        expiry_date: Date.now() + 3600000,
-        token_type: 'Bearer',
-        scope: 'https://www.googleapis.com/auth/calendar.readonly',
-     };
+      access_token: 'mock_access_token',
+      refresh_token: 'mock_refresh_token',
+      expiry_date: Date.now() + 3600000,
+      token_type: 'Bearer',
+      scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    };
 
     it('should exchange code for tokens and set credentials', async () => {
       // Mock getToken to resolve successfully
@@ -144,17 +153,24 @@ describe('CalendarService', () => {
       const error = new Error('Google API Error');
       mockGetToken.mockRejectedValue(error); // Mock getToken to reject
 
-      await expect(service.getTokensFromCode(authCode)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.getTokensFromCode(authCode)).rejects.toThrow(
+        InternalServerErrorException,
+      );
       expect(mockSetCredentials).not.toHaveBeenCalled();
     });
   });
 
   describe('listUpcomingEvents', () => {
-     const mockEvent: calendar_v3.Schema$Event = { id: '1', summary: 'Test Event' };
+    const mockEvent: calendar_v3.Schema$Event = {
+      id: '1',
+      summary: 'Test Event',
+    };
 
     it('should list upcoming events if authenticated', async () => {
       // Simulate that tokens were obtained and credentials set
-      mockOAuth2ClientInstance.credentials = { access_token: 'mock_access_token' };
+      mockOAuth2ClientInstance.credentials = {
+        access_token: 'mock_access_token',
+      };
       (service as any).tempTokens = mockOAuth2ClientInstance.credentials; // Ensure getOAuthClient sets credentials
 
       // Mock the calendar API response
@@ -164,7 +180,10 @@ describe('CalendarService', () => {
       const result = await service.listUpcomingEvents(5); // Pass maxResults: 5
 
       // Check if google.calendar was called correctly
-      expect(google.calendar).toHaveBeenCalledWith({ version: 'v3', auth: mockOAuth2ClientInstance });
+      expect(google.calendar).toHaveBeenCalledWith({
+        version: 'v3',
+        auth: mockOAuth2ClientInstance,
+      });
 
       // **** CORRECTED ASSERTION ****
       // Check if events.list was called with correct parameters matching the call above
@@ -181,30 +200,35 @@ describe('CalendarService', () => {
     });
 
     it('should throw UnauthorizedException if credentials are not set', async () => {
-       // Ensure no credentials are set
-       mockOAuth2ClientInstance.credentials = null;
-       (service as any).tempTokens = null;
+      // Ensure no credentials are set
+      mockOAuth2ClientInstance.credentials = null;
+      (service as any).tempTokens = null;
 
-       // This test expects the service call to reject
-       await expect(service.listUpcomingEvents(5)).rejects.toThrow(UnauthorizedException);
-       // Ensure the actual API call was not made if unauthorized
-       expect(mockEventsList).not.toHaveBeenCalled();
+      // This test expects the service call to reject
+      await expect(service.listUpcomingEvents(5)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      // Ensure the actual API call was not made if unauthorized
+      expect(mockEventsList).not.toHaveBeenCalled();
     });
 
-     it('should throw InternalServerErrorException if calendar API fails', async () => {
-        // Simulate valid credentials being set
-        mockOAuth2ClientInstance.credentials = { access_token: 'mock_access_token' };
-        (service as any).tempTokens = mockOAuth2ClientInstance.credentials;
+    it('should throw InternalServerErrorException if calendar API fails', async () => {
+      // Simulate valid credentials being set
+      mockOAuth2ClientInstance.credentials = {
+        access_token: 'mock_access_token',
+      };
+      (service as any).tempTokens = mockOAuth2ClientInstance.credentials;
 
-        // Mock the underlying API call to reject
-        const error = new Error('API Error');
-        mockEventsList.mockRejectedValue(error);
+      // Mock the underlying API call to reject
+      const error = new Error('API Error');
+      mockEventsList.mockRejectedValue(error);
 
-        // Expect the service method to reject with the correct NestJS exception
-        await expect(service.listUpcomingEvents(5)).rejects.toThrow(InternalServerErrorException);
-        // Ensure the API call was attempted
-        expect(mockEventsList).toHaveBeenCalled();
-     });
+      // Expect the service method to reject with the correct NestJS exception
+      await expect(service.listUpcomingEvents(5)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      // Ensure the API call was attempted
+      expect(mockEventsList).toHaveBeenCalled();
+    });
   });
-
 });

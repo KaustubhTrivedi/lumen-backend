@@ -1,10 +1,18 @@
 // src/context/context.controller.ts
-import { Controller, Post, Body, Logger, HttpCode, HttpStatus, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Logger,
+  HttpCode,
+  HttpStatus,
+  Get,
+} from '@nestjs/common';
 import { LocationDto } from './dto/location.dto';
 import { ContextService } from './context.service';
 import { McpPayload } from './interfaces/mcp.interfaces';
 
-@Controller('context') 
+@Controller('context')
 export class ContextController {
   private readonly logger = new Logger(ContextController.name);
 
