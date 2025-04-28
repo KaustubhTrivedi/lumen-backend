@@ -13,6 +13,7 @@ import { OAuthTokenModule } from './oauth-token/oauth-token.module';
 import { OAuthToken } from './oauth-token/entities/oauth-token.entity';
 import { ContextModule} from './context/context.module';
 import { UsersModule } from './users/users.module';
+import { User } from './users/entites/user.entity';
 
 @Module({
   imports: [
@@ -31,7 +32,7 @@ import { UsersModule } from './users/users.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         logging: true,
-        entities: [Task,OAuthToken], // Automatically loads entities
+        entities: [Task,OAuthToken,User], // Automatically loads entities
         synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false), // Default to false (safer), enable via .env for dev if needed
         // ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false, // Example for enabling SSL if needed
       }),
