@@ -12,6 +12,7 @@ import { AuthModule } from './auth/auth.module';
 import { OAuthTokenModule } from './oauth-token/oauth-token.module';
 import { OAuthToken } from './oauth-token/entities/oauth-token.entity';
 import { ContextModule} from './context/context.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ContextModule} from './context/context.module';
     AuthModule,
     OAuthTokenModule,
     ContextModule,
+    UsersModule,
     // Other modules will go here later
   ],
   controllers: [AppController],
