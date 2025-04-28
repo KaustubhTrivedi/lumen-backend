@@ -10,7 +10,7 @@
       ParseUUIDPipe,
       HttpCode,
       HttpStatus,
-      UseGuards, // Import UseGuards
+      UseGuards,
       Req, // Import Req to access request object
     } from '@nestjs/common';
     import { TasksService } from './tasks.service';
@@ -19,6 +19,7 @@
     import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Import the guard
     import { Request } from 'express'; // Import Request type
     import { JwtPayload } from '../auth/strategies/jwt.strategy'; // Import JwtPayload type
+    import { Task } from './entities/task.entity'; // Import Task for return types
 
     @Controller('tasks')
     @UseGuards(JwtAuthGuard) // Apply the guard to ALL routes in this controller
@@ -29,50 +30,43 @@
 
       @Post()
       @HttpCode(HttpStatus.CREATED)
-      // Access the user info attached by the guard using @Req()
-      create(@Body() createTaskDto: CreateTaskDto, @Req() req: Request) {
-        // req.user contains the payload returned by JwtStrategy.validate
+      create(@Body() createTaskDto: CreateTaskDto, @Req() req: Request): Promise<Task> {
         const user = req.user as JwtPayload; // Cast to JwtPayload type
-        console.log(`Creating task for user ID: ${user.sub}`); // user.sub is the user ID
-        // TODO: Modify TasksService.create to accept and use the userId (user.sub)
-        return this.tasksService.create(createTaskDto /*, user.sub */);
+        // Pass user.sub (the user ID from JWT) as the second argument
+        return this.tasksService.create(createTaskDto, user.sub);
       }
 
       @Get()
-      findAll(@Req() req: Request) {
+      findAll(@Req() req: Request): Promise<Task[]> {
         const user = req.user as JwtPayload;
-        console.log(`Fetching tasks for user ID: ${user.sub}`);
-        // TODO: Modify TasksService.findAll to filter by userId (user.sub)
-        return this.tasksService.findAll(/* user.sub */);
+        // Pass user.sub as the argument
+        return this.tasksService.findAll(user.sub);
       }
 
       @Get(':id')
-      findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
+      findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request): Promise<Task> {
         const user = req.user as JwtPayload;
-        console.log(`Fetching task ${id} for user ID: ${user.sub}`);
-        // TODO: Modify TasksService.findOne to check ownership (userId == user.sub)
-        return this.tasksService.findOne(id /*, user.sub */);
+        // Pass user.sub as the second argument
+        return this.tasksService.findOne(id, user.sub);
       }
 
       @Patch(':id')
       update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateTaskDto: UpdateTaskDto,
-        @Req() req: Request,
-      ) {
+        @Req() req: Request, // Get request object
+      ): Promise<Task> {
         const user = req.user as JwtPayload;
-        console.log(`Updating task ${id} for user ID: ${user.sub}`);
-        // TODO: Modify TasksService.update to check ownership (userId == user.sub)
-        return this.tasksService.update(id, updateTaskDto /*, user.sub */);
+        // Pass user.sub as the third argument
+        return this.tasksService.update(id, updateTaskDto, user.sub);
       }
 
       @Delete(':id')
       @HttpCode(HttpStatus.NO_CONTENT)
-      remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
+      remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request): Promise<void> {
         const user = req.user as JwtPayload;
-        console.log(`Deleting task ${id} for user ID: ${user.sub}`);
-        // TODO: Modify TasksService.remove to check ownership (userId == user.sub)
-        return this.tasksService.remove(id /*, user.sub */);
+        // Pass user.sub as the second argument
+        return this.tasksService.remove(id, user.sub);
       }
     }
     
