@@ -9,7 +9,9 @@ import { HealthModule } from './health/health.module';
 import { Task } from './tasks/entities/task.entity';
 import { CalendarModule } from './calendar/calendar.module';
 import { AuthModule } from './auth/auth.module';
-import { OauthTokenModule } from './oauth-token/oauth-token.module';
+import { OAuthTokenModule } from './oauth-token/oauth-token.module';
+import { OAuthToken } from './oauth-token/entities/oauth-token.entity';
+import { ContextModule} from './context/context.module';
 
 @Module({
   imports: [
@@ -28,7 +30,7 @@ import { OauthTokenModule } from './oauth-token/oauth-token.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         logging: true,
-        entities: [Task], // Automatically loads entities
+        entities: [Task,OAuthToken], // Automatically loads entities
         synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false), // Default to false (safer), enable via .env for dev if needed
         // ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false, // Example for enabling SSL if needed
       }),
@@ -37,7 +39,8 @@ import { OauthTokenModule } from './oauth-token/oauth-token.module';
     HealthModule,
     CalendarModule,
     AuthModule,
-    OauthTokenModule,
+    OAuthTokenModule,
+    ContextModule,
     // Other modules will go here later
   ],
   controllers: [AppController],
