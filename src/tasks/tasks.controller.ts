@@ -1,91 +1,78 @@
-// src/tasks/tasks.controller.ts
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  ParseUUIDPipe, // Pipe to validate UUID parameters
-  HttpCode,
-  HttpStatus, // Enum for HTTP status codes
-} from '@nestjs/common';
-import { TasksService } from './tasks.service';
-import { CreateTaskDto } from './dto/create-task.dto';
-import { UpdateTaskDto } from './dto/update-task.dto';
-import { Task } from './entities/task.entity'; // Import Task entity for return types
+    // src/tasks/tasks.controller.ts
+    import {
+      Controller,
+      Get,
+      Post,
+      Body,
+      Patch,
+      Param,
+      Delete,
+      ParseUUIDPipe,
+      HttpCode,
+      HttpStatus,
+      UseGuards, // Import UseGuards
+      Req, // Import Req to access request object
+    } from '@nestjs/common';
+    import { TasksService } from './tasks.service';
+    import { CreateTaskDto } from './dto/create-task.dto';
+    import { UpdateTaskDto } from './dto/update-task.dto';
+    import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Import the guard
+    import { Request } from 'express'; // Import Request type
+    import { JwtPayload } from '../auth/strategies/jwt.strategy'; // Import JwtPayload type
 
-// Define the base route for this controller as '/tasks'
-@Controller('tasks')
-export class TasksController {
-  // Inject the TasksService
-  constructor(private readonly tasksService: TasksService) {}
+    @Controller('tasks')
+    @UseGuards(JwtAuthGuard) // Apply the guard to ALL routes in this controller
+    export class TasksController {
+      constructor(private readonly tasksService: TasksService) {}
 
-  /**
-   * Endpoint to create a new task.
-   * POST /tasks
-   * @param createTaskDto - Validated data from the request body.
-   * @returns The newly created task.
-   */
-  @Post()
-  @HttpCode(HttpStatus.CREATED) // Set response status code to 201 Created
-  create(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
-    // The @Body() decorator extracts the request body.
-    // The ValidationPipe (configured globally in main.ts) automatically validates it against CreateTaskDto.
-    return this.tasksService.create(createTaskDto);
-  }
+      // Now, all methods below require a valid JWT Bearer token in the Authorization header
 
-  /**
-   * Endpoint to retrieve all tasks.
-   * GET /tasks
-   * @returns An array of all tasks.
-   */
-  @Get()
-  findAll(): Promise<Task[]> {
-    return this.tasksService.findAll();
-  }
+      @Post()
+      @HttpCode(HttpStatus.CREATED)
+      // Access the user info attached by the guard using @Req()
+      create(@Body() createTaskDto: CreateTaskDto, @Req() req: Request) {
+        // req.user contains the payload returned by JwtStrategy.validate
+        const user = req.user as JwtPayload; // Cast to JwtPayload type
+        console.log(`Creating task for user ID: ${user.sub}`); // user.sub is the user ID
+        // TODO: Modify TasksService.create to accept and use the userId (user.sub)
+        return this.tasksService.create(createTaskDto /*, user.sub */);
+      }
 
-  /**
-   * Endpoint to retrieve a single task by ID.
-   * GET /tasks/:id
-   * @param id - The UUID passed in the URL path.
-   * @returns The found task.
-   */
-  @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Task> {
-    // @Param('id') extracts the 'id' parameter from the URL.
-    // ParseUUIDPipe ensures the 'id' parameter is a valid UUID string before it reaches the service.
-    return this.tasksService.findOne(id);
-  }
+      @Get()
+      findAll(@Req() req: Request) {
+        const user = req.user as JwtPayload;
+        console.log(`Fetching tasks for user ID: ${user.sub}`);
+        // TODO: Modify TasksService.findAll to filter by userId (user.sub)
+        return this.tasksService.findAll(/* user.sub */);
+      }
 
-  /**
-   * Endpoint to update an existing task.
-   * PATCH /tasks/:id
-   * @param id - The UUID of the task to update.
-   * @param updateTaskDto - Validated data containing the fields to update.
-   * @returns The updated task.
-   */
-  @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateTaskDto: UpdateTaskDto,
-  ): Promise<Task> {
-    // The @Body() decorator extracts the request body.
-    // The ValidationPipe validates it against UpdateTaskDto.
-    return this.tasksService.update(id, updateTaskDto);
-  }
+      @Get(':id')
+      findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
+        const user = req.user as JwtPayload;
+        console.log(`Fetching task ${id} for user ID: ${user.sub}`);
+        // TODO: Modify TasksService.findOne to check ownership (userId == user.sub)
+        return this.tasksService.findOne(id /*, user.sub */);
+      }
 
-  /**
-   * Endpoint to delete a task by ID.
-   * DELETE /tasks/:id
-   * @param id - The UUID of the task to delete.
-   */
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT) // Set response status code to 204 No Content
-  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    // The service method returns Promise<void> and handles NotFoundException.
-    // If successful, NestJS sends a 204 response automatically due to @HttpCode.
-    return this.tasksService.remove(id);
-  }
-}
+      @Patch(':id')
+      update(
+        @Param('id', ParseUUIDPipe) id: string,
+        @Body() updateTaskDto: UpdateTaskDto,
+        @Req() req: Request,
+      ) {
+        const user = req.user as JwtPayload;
+        console.log(`Updating task ${id} for user ID: ${user.sub}`);
+        // TODO: Modify TasksService.update to check ownership (userId == user.sub)
+        return this.tasksService.update(id, updateTaskDto /*, user.sub */);
+      }
+
+      @Delete(':id')
+      @HttpCode(HttpStatus.NO_CONTENT)
+      remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
+        const user = req.user as JwtPayload;
+        console.log(`Deleting task ${id} for user ID: ${user.sub}`);
+        // TODO: Modify TasksService.remove to check ownership (userId == user.sub)
+        return this.tasksService.remove(id /*, user.sub */);
+      }
+    }
+    
