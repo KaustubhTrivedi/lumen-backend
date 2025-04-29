@@ -2,10 +2,12 @@
 import { Module } from '@nestjs/common';
 import { AiAgentService } from './ai-agent.service';
 import { ContextModule } from '../context/context.module'; // Import ContextModule
+import { AiAgentController } from './ai-agent.controller';
 
 @Module({
-  imports: [ContextModule], // Import ContextModule to access ContextService
+  imports: [ContextModule],
   providers: [AiAgentService],
-  exports: [AiAgentService], // Export if needed by other modules later
+  exports: [AiAgentService],
+  controllers: [AiAgentController],
 })
 export class AiAgentModule {}
