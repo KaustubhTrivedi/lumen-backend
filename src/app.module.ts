@@ -14,6 +14,7 @@ import { OAuthToken } from './oauth-token/entities/oauth-token.entity';
 import { ContextModule } from './context/context.module';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
+import { EncryptionModule } from './common/encryption/encryption.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { User } from './users/entities/user.entity';
     OAuthTokenModule,
     ContextModule,
     UsersModule,
+    EncryptionModule,
     // Other modules will go here later
   ],
   controllers: [AppController],
