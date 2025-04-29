@@ -15,6 +15,7 @@ import { ContextModule } from './context/context.module';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
 import { EncryptionModule } from './common/encryption/encryption.module';
+import { AiAgentModule } from './ai-agent/ai-agent.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { EncryptionModule } from './common/encryption/encryption.module';
     ContextModule,
     UsersModule,
     EncryptionModule,
+    AiAgentModule,
     // Other modules will go here later
   ],
   controllers: [AppController],

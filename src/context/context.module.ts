@@ -9,6 +9,6 @@ import { TasksModule } from 'src/tasks/tasks.module';
   imports: [CalendarModule, TasksModule],
   controllers: [ContextController],
   providers: [ContextService],
-  exports: [ContextService], 
+  exports: [ContextService],
 })
 export class ContextModule {}
