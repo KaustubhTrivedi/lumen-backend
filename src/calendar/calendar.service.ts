@@ -37,24 +37,21 @@
 
       generateAuthUrl(state: string): string {
         if (!this.oauth2Client) {
-          throw new InternalServerErrorException('Google OAuth2 Client not initialized. Check configuration.');
-        }
-        const scopes = ['https://www.googleapis.com/auth/calendar.readonly'];
-        const authorizationUrl = this.oauth2Client.generateAuthUrl({
-          access_type: 'offline',
-          scope: scopes,
-          include_granted_scopes: true,
-          prompt: 'consent',
-          state: state, // ** Include the state parameter **
-        });
-        this.logger.log(`Generated Google Auth URL with state.`);
-        return authorizationUrl;
+            throw new InternalServerErrorException('Google OAuth2 Client not initialized. Check configuration.');
+          }
+          const scopes = ['https://www.googleapis.com/auth/calendar.readonly'];
+          const authorizationUrl = this.oauth2Client.generateAuthUrl({
+            access_type: 'offline',
+            scope: scopes,
+            include_granted_scopes: true,
+            prompt: 'consent',
+            state: state, // Include state
+          });
+          this.logger.log(`Generated Google Auth URL with state.`);
+          return authorizationUrl;
       }
 
-      
-
       async getTokensFromCode(code: string, userId: string): Promise<Auth.Credentials> {
-        // ... (method remains the same, calls saveOrUpdateTokens below)
         if (!this.oauth2Client) {
           throw new InternalServerErrorException('Google OAuth2 Client not initialized.');
         }
@@ -63,8 +60,10 @@
           const { tokens } = await this.oauth2Client.getToken(code);
           this.logger.log(`Successfully exchanged code for tokens for user ${userId}.`);
 
+          // Save the (now encrypted) tokens
           await this.saveOrUpdateTokens(userId, OAuthProvider.GOOGLE_CALENDAR, tokens);
 
+          // Set the *original, unencrypted* tokens on the client for immediate use
           this.oauth2Client.setCredentials(tokens);
           return tokens;
 
@@ -74,26 +73,27 @@
         }
       }
 
-      // Updated to use EncryptionService
+      /**
+       * Encrypts and saves/updates OAuth tokens in the database.
+       */
       private async saveOrUpdateTokens(userId: string, provider: OAuthProvider, tokens: Partial<Auth.Credentials>): Promise<void> {
          this.logger.log(`Encrypting and saving/updating tokens for user ${userId}, provider: ${provider}`);
 
          // ** Encrypt tokens before saving **
          const encryptedAccessToken = this.encryptionService.encrypt(tokens.access_token);
-         // Encrypt refresh token only if it exists
          const encryptedRefreshToken = tokens.refresh_token
              ? this.encryptionService.encrypt(tokens.refresh_token)
-             : undefined; // Keep undefined if not present in input
+             : undefined; // Keep undefined if not present
 
          let existingToken = await this.tokenRepository.findOneBy({ userId, provider });
 
          if (existingToken) {
             // Update existing entry
-            if (encryptedAccessToken) { // Check if encryption succeeded (returned non-null)
+            if (encryptedAccessToken) {
                  existingToken.accessToken = encryptedAccessToken;
             }
-            // Only update refresh token if a new encrypted one was generated
-            if (encryptedRefreshToken) {
+            if (encryptedRefreshToken !== undefined) { // Check undefined explicitly
+                // Allow setting refresh token to null if original was null/undefined and encryption resulted in null
                 existingToken.refreshToken = encryptedRefreshToken;
             }
             if (tokens.expiry_date !== undefined) {
@@ -106,16 +106,15 @@
             this.logger.log(`Updated existing encrypted tokens for user ${userId}, provider ${provider}`);
          } else {
             // Create new entry
-            if (!encryptedAccessToken) { // Check if encryption succeeded
+            if (!encryptedAccessToken) {
                  this.logger.error(`Encryption failed or access token was null/undefined for new token: user ${userId}, provider ${provider}.`);
-                 return; // Cannot create without a valid encrypted access token
+                 return;
             }
             const newToken = this.tokenRepository.create({
                 userId: userId,
                 provider: provider,
                 accessToken: encryptedAccessToken,
-                // Assign the encrypted refresh token (will be null if original was null/undefined or encryption failed)
-                refreshToken: encryptedRefreshToken ?? null,
+                refreshToken: encryptedRefreshToken ?? null, // Save null if undefined/null
                 expiryDate: tokens.expiry_date ?? null,
                 scope: tokens.scope ?? null,
             });
@@ -124,13 +123,15 @@
          }
       }
 
-      // Updated to use EncryptionService
+      /**
+       * Loads and decrypts tokens for a user, handles refresh if needed.
+       */
       private async loadTokensAndGetClient(userId: string): Promise<Auth.OAuth2Client> {
         if (!this.oauth2Client) {
           throw new InternalServerErrorException('Google OAuth2 Client not initialized.');
         }
 
-        this.oauth2Client.setCredentials({}); // Reset credentials before loading
+        this.oauth2Client.setCredentials({}); // Reset credentials
 
         this.logger.log(`Loading and decrypting tokens from DB for user ${userId}, provider ${OAuthProvider.GOOGLE_CALENDAR}`);
         const storedToken = await this.tokenRepository.findOneBy({ userId, provider: OAuthProvider.GOOGLE_CALENDAR });
@@ -142,16 +143,14 @@
 
         // ** Decrypt tokens after loading **
         const accessToken = this.encryptionService.decrypt(storedToken.accessToken);
-        const refreshToken = this.encryptionService.decrypt(storedToken.refreshToken); // Will be null if original was null or decryption fails
+        const refreshToken = this.encryptionService.decrypt(storedToken.refreshToken);
 
-        // Check if decryption failed (returned null)
         if (accessToken === null) {
              this.logger.error(`Failed to decrypt access token for user ${userId}. Stored token might be corrupted or key changed.`);
              // Optionally delete the corrupted token
              // await this.tokenRepository.delete({ id: storedToken.id });
              throw new InternalServerErrorException(`Failed to decrypt stored credentials for user ${userId}. Please re-authenticate.`);
         }
-        // Note: Decryption failure of refresh token might be acceptable if access token is still valid
 
         const decryptedCredentials: Auth.Credentials = {
           access_token: accessToken,
@@ -164,7 +163,7 @@
         // Set the decrypted credentials on the client
         this.oauth2Client.setCredentials(decryptedCredentials);
 
-        // Check if the access token is expired or missing (using decrypted token)
+        // Check if the access token is expired or missing
         const now = Date.now();
         const buffer = 60 * 1000; // 60-second buffer
         if (!decryptedCredentials.access_token || (decryptedCredentials.expiry_date && decryptedCredentials.expiry_date < (now + buffer))) {
@@ -181,10 +180,9 @@
               const { credentials: refreshedCredentials } = await this.oauth2Client.refreshAccessToken();
               this.logger.log(`Successfully refreshed access token for user ${userId}.`);
 
-              // Merge new credentials with the existing refresh token for saving
               const updatedTokensToSave = {
                  ...refreshedCredentials,
-                 refresh_token: decryptedCredentials.refresh_token
+                 refresh_token: decryptedCredentials.refresh_token // Keep the original refresh token
               };
 
               // Save the *newly encrypted* refreshed tokens
