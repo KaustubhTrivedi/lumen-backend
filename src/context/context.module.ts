@@ -2,13 +2,13 @@
 import { Module } from '@nestjs/common';
 import { ContextController } from './context.controller';
 import { ContextService } from './context.service';
-import { CalendarModule } from '../calendar/calendar.module'; // Import CalendarModule
+import { CalendarModule } from '../calendar/calendar.module';
 import { TasksModule } from 'src/tasks/tasks.module';
 
 @Module({
-  imports: [CalendarModule, TasksModule], // Add CalendarModule here
+  imports: [CalendarModule, TasksModule],
   controllers: [ContextController],
   providers: [ContextService],
-  exports: [ContextService], // Export ContextService if other modules need it
+  exports: [ContextService], 
 })
 export class ContextModule {}
