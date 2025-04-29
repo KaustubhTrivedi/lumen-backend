@@ -1,6 +1,6 @@
     // src/users/entities/user.entity.ts
-    import { Task } from '../../tasks/entities/task.entity'; // Import Task
-    import { OAuthToken } from '../../oauth-token/entities/oauth-token.entity';
+    import { Task } from '../../tasks/entities/task.entity';
+    import { OAuthToken } from '../../oauth-token/entities/oauth-token.entity'; // Import OAuthToken
     import {
       Entity,
       PrimaryGeneratedColumn,
@@ -8,7 +8,7 @@
       CreateDateColumn,
       UpdateDateColumn,
       Index,
-      OneToMany, // Import OneToMany decorator
+      OneToMany, // Ensure OneToMany is imported
     } from 'typeorm';
 
     @Entity('users')
@@ -30,13 +30,12 @@
       // lastName: string | null;
 
       // --- Relationships ---
-      // ** Uncommented and defined the OneToMany relationship to Task **
-      @OneToMany(() => Task, (task) => task.user) // Link to tasks
-      tasks: Task[]; // Defines the 'tasks' property expected by Task entity's ManyToOne
+      @OneToMany(() => Task, (task) => task.user)
+      tasks: Task[];
 
-      // Keep this commented out for now unless you are ready to link tokens
-      // @OneToMany(() => OAuthToken, (token) => token.user) // Link to OAuth tokens
-      // oauthTokens: OAuthToken[];
+      // ** Ensure this relationship to OAuthToken is defined **
+      @OneToMany(() => OAuthToken, (token) => token.user) // Link to OAuth tokens
+      oauthTokens: OAuthToken[]; // Defines the 'oauthTokens' property expected by OAuthToken entity's ManyToOne
       // --- End Relationships ---
 
       @CreateDateColumn({ type: 'timestamp with time zone' })
