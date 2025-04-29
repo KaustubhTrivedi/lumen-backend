@@ -8,7 +8,7 @@
     import { Request } from 'express'; // Import Request type
     import { JwtPayload } from '../auth/strategies/jwt.strategy'; // Import JwtPayload type
 
-    @Controller('context') // Defines the base route for this controller as '/context'
+    @Controller('context') // Base route /context
     export class ContextController {
       private readonly logger = new Logger(ContextController.name);
 
@@ -17,25 +17,29 @@
 
       /**
        * POST /context/location
-       * Endpoint to receive the user's current location from the frontend.
+       * Protected endpoint to receive the current location for the logged-in user.
        * Delegates the handling of the location data to the ContextService.
-       * Note: Currently not protected by auth, consider adding if location should be user-specific.
        * @param locationDto - Validated location data from the request body.
+       * @param req - The Express request object, populated with JWT payload by JwtAuthGuard.
        * @returns A simple success message object.
        */
-      // @UseGuards(JwtAuthGuard) // Uncomment to protect this route
       @Post('location')
+      @UseGuards(JwtAuthGuard) // ** Protect this route **
       @HttpCode(HttpStatus.OK) // Set the HTTP status code to 200 OK for successful posts
-      updateLocation(@Body() locationDto: LocationDto /*, @Req() req: Request */) {
-        // const user = req.user as JwtPayload; // Get user if route is protected
-        // TODO: Associate location with user if needed (pass user.sub to service)
-        this.contextService.handleLocationUpdate(locationDto);
-        return { message: 'Location received successfully.' };
+      // ** Inject Req object **
+      updateLocation(@Body() locationDto: LocationDto, @Req() req: Request) {
+         // ** Extract user payload **
+         const user = req.user as JwtPayload;
+         this.logger.log(`Received location update request for user ${user.sub}`);
+         // ** Pass userId and locationDto to the service **
+         this.contextService.handleLocationUpdate(user.sub, locationDto);
+         // Return a simple acknowledgement response
+         return { message: 'Location received successfully.' };
       }
 
       /**
        * GET /context
-       * Endpoint to retrieve the current assembled context snapshot for the logged-in user.
+       * Protected endpoint to retrieve the current assembled context snapshot for the logged-in user.
        * Requires JWT authentication via JwtAuthGuard.
        * @param req - The Express request object, populated with user payload by the guard.
        * @returns A Promise resolving to the assembled McpPayload object containing the current context for the user.
