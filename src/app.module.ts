@@ -16,6 +16,8 @@ import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
 import { EncryptionModule } from './common/encryption/encryption.module';
 import { AiAgentModule } from './ai-agent/ai-agent.module';
+import { TaskDependenciesModule } from './task-dependencies/task-dependencies.module';
+import { TaskDependency } from './task-dependencies/entities/task-dependency.entity';
 
 @Module({
   imports: [
@@ -34,7 +36,7 @@ import { AiAgentModule } from './ai-agent/ai-agent.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         logging: true,
-        entities: [Task, OAuthToken, User], // Automatically loads entities
+        entities: [Task, OAuthToken, User, TaskDependency], // Automatically loads entities
         synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false), // Default to false (safer), enable via .env for dev if needed
         // ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false, // Example for enabling SSL if needed
       }),
@@ -48,6 +50,7 @@ import { AiAgentModule } from './ai-agent/ai-agent.module';
     UsersModule,
     EncryptionModule,
     AiAgentModule,
+    TaskDependenciesModule,
     // Other modules will go here later
   ],
   controllers: [AppController],

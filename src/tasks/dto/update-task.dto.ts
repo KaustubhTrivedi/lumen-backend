@@ -1,21 +1,33 @@
-// src/tasks/dto/update-task.dto.ts
-import { PartialType } from '@nestjs/mapped-types'; // Use PartialType for PATCH DTOs
-import { CreateTaskDto } from './create-task.dto'; // Import the CreateTaskDto
-import { IsBoolean, IsOptional } from 'class-validator'; // Import necessary validators
+    // src/tasks/dto/update-task.dto.ts
+    import { PartialType } from '@nestjs/mapped-types'; // Used to make properties optional
+    import { CreateTaskDto } from './create-task.dto'; // Base DTO
+    import { IsBoolean, IsOptional, IsEnum } from 'class-validator'; // Import necessary validators
+    import { TaskImportance } from '../entities/task.entity'; // Import the TaskImportance enum
 
-/**
- * UpdateTaskDto extends CreateTaskDto using PartialType.
- * This makes all properties inherited from CreateTaskDto optional
- * while retaining their original validation decorators.
- * We can also add properties specific to updates.
- */
-export class UpdateTaskDto extends PartialType(CreateTaskDto) {
-  // Add fields that are specific to updates or need explicit handling during updates.
-  // 'isComplete' is a common example.
-  @IsBoolean() // Ensures the value is either true or false
-  @IsOptional() // Allows this field to be omitted in the PATCH request body
-  isComplete?: boolean;
+    /**
+     * Data Transfer Object for updating an existing task.
+     * Inherits properties from CreateTaskDto (making them optional via PartialType)
+     * and adds specific update fields like isComplete.
+     */
+    export class UpdateTaskDto extends PartialType(CreateTaskDto) {
+      /**
+       * Optional flag to mark the task as complete or incomplete.
+       */
+      @IsBoolean({ message: 'isComplete must be a boolean value (true or false)'})
+      @IsOptional() // Field is not required in the request body
+      isComplete?: boolean;
 
-  // Note: title, description, dueDate are automatically inherited as optional
-  // fields with their validation rules from CreateTaskDto via PartialType.
-}
+      /**
+       * Optional importance level for the task.
+       * Inherited as optional from CreateTaskDto via PartialType.
+       * The @IsEnum decorator ensures that if provided, the value must be one of the allowed enum values.
+       */
+      @IsEnum(TaskImportance, { message: 'Importance must be one of: low, medium, high' })
+      @IsOptional() // Field is not required in the request body
+      importance?: TaskImportance;
+
+      // Note: title, description, and dueDate are also implicitly included here
+      // as optional fields due to extending PartialType(CreateTaskDto).
+      // Their validation rules from CreateTaskDto are also inherited.
+    }
+    

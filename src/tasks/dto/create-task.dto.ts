@@ -1,30 +1,38 @@
-// src/tasks/dto/create-task.dto.ts
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsDateString, // Use IsDateString if you expect ISO date strings
-  MaxLength,
-  // Add IsArray, IsString for tags if you implement them later
-} from 'class-validator';
+    // src/tasks/dto/create-task.dto.ts
+    import {
+      IsString,
+      IsNotEmpty,
+      IsOptional,
+      IsDateString,
+      MaxLength,
+      IsEnum, // Import IsEnum validator
+    } from 'class-validator';
+    import { TaskImportance } from '../entities/task.entity'; // Import the enum
 
-export class CreateTaskDto {
-  @IsString() // Value must be a string
-  @IsNotEmpty() // Value cannot be empty
-  @MaxLength(255) // Maximum length constraint
-  title: string;
+    /**
+     * Data Transfer Object for creating a new task.
+     * Defines the expected shape and validation rules for the request body.
+     */
+    export class CreateTaskDto {
+      @IsString({ message: 'Title must be a string' })
+      @IsNotEmpty({ message: 'Title cannot be empty' })
+      @MaxLength(255, { message: 'Title cannot exceed 255 characters' })
+      title: string;
 
-  @IsString()
-  @IsOptional() // Value can be omitted from the request body
-  description?: string; // Mark as optional in TypeScript too
+      @IsString()
+      @IsOptional() // Description is not required
+      description?: string;
 
-  @IsDateString() // Value must be a valid ISO 8601 date string (e.g., "2025-12-31T18:30:00.000Z")
-  @IsOptional()
-  dueDate?: string; // Keep as string, TypeORM/DB driver handles conversion
+      @IsDateString({}, { message: 'dueDate must be a valid ISO 8601 date string' })
+      @IsOptional() // Due date is not required
+      dueDate?: string;
 
-  // Example for tags if added later:
-  // @IsArray()
-  // @IsString({ each: true }) // Validates each element in the array is a string
-  // @IsOptional()
-  // tags?: string[];
-}
+      /**
+       * Optional importance level for the task.
+       * If not provided, the entity default ('medium') will be used.
+       */
+      @IsEnum(TaskImportance, { message: 'Importance must be one of: low, medium, high' })
+      @IsOptional() // Importance is not required on creation
+      importance?: TaskImportance;
+    }
+    
